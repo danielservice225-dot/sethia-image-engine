@@ -1,33 +1,31 @@
 # SethIA Image Engine
 
-Open-source image-generation API for SethIA. It supports a cloud-based **Cloudflare Workers AI** provider (no personal computer or self-hosted GPU required) and an optional separately hosted ComfyUI provider. The API does not bundle model weights.
+Open-source image-generation API for SethIA. The default provider uses the hosted Pollinations image endpoint, so this repository does not require a local GPU or Cloudflare credentials. A separately hosted ComfyUI server is also supported. The repository itself does not contain AI model weights.
 
 ## Endpoints
 
 - `GET /health`: basic health check.
-- `GET /ready`: checks whether the selected provider is configured.
-- `POST /generate`: generates and returns a PNG image.
+- `GET /ready`: checks the selected provider configuration.
+- `POST /generate`: generates an image and returns image bytes.
 - Bearer-token authentication protects generation requests.
 
-## Recommended cloud setup (Cloudflare Workers AI)
+## Deploy on Render
 
-1. Create or sign in to a Cloudflare account and open Workers AI.
-2. Find the Cloudflare **Account ID** in the dashboard.
-3. Create an API token with the minimum permissions needed to run Workers AI. Never put this token in frontend code or commit it to GitHub.
-4. Deploy this repository as a Docker web service on Render.
-5. In Render's Environment settings, add:
-   - `ENGINE_API_TOKEN`: a long random secret shared only with SethIA's backend.
-   - `IMAGE_PROVIDER`: `cloudflare`
-   - `CLOUDFLARE_ACCOUNT_ID`: your Cloudflare account ID.
-   - `CLOUDFLARE_API_TOKEN`: your Cloudflare API token.
-   - `CLOUDFLARE_IMAGE_MODEL`: `@cf/black-forest-labs/flux-1-schnell`
-6. Deploy and test `/health`, then `/ready`. Test `POST /generate` from the backend using the bearer token.
+1. Create a **Web Service** from this GitHub repository, branch `main`, runtime **Docker**.
+2. In Render Environment, set:
+   - `ENGINE_API_TOKEN`: a long random secret shared only with SethIA's backend. Keep it secret.
+   - `IMAGE_PROVIDER`: `pollinations`
+   - `POLLINATIONS_BASE_URL`: `https://image.pollinations.ai/prompt`
+3. Deploy, then check `/health` and `/ready`.
+4. Test `POST /generate` from a backend or API client with header `Authorization: Bearer YOUR_SECRET_TOKEN` and JSON such as:
+   `{"prompt":"A futuristic African city at sunset","width":768,"height":768,"steps":4}`.
+   The response should be image bytes.
 
-Cloudflare's model availability, permissions, limits, and charges/free allowance depend on the account and current Cloudflare terms. Check the dashboard before making the feature public; do not promise unlimited free generation.
+**Important:** Pollinations is an external hosted service. Access, availability, rate limits, model behavior, and any API-key requirements may change. This setup is not a guarantee of unlimited free generation. If the provider returns an error or non-image response, check its current API documentation and service status.
 
-## Local configuration
+## Local setup
 
-Copy `.env.example` to `.env`, then set the credentials above. Install dependencies and start the API:
+Copy `.env.example` to `.env`, set a private `ENGINE_API_TOKEN`, then run:
 
 ```bash
 python -m venv .venv
@@ -37,24 +35,18 @@ pip install -r requirements.txt
 uvicorn app:app --host 127.0.0.1 --port 8000
 ```
 
-Open http://127.0.0.1:8000/docs to inspect the API. Example request:
+Open `http://127.0.0.1:8000/docs` to inspect the API.
 
-```bash
-curl -X POST http://127.0.0.1:8000/generate \\
-  -H "Authorization: Bearer YOUR_SECRET_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{"prompt":"A futuristic robot in Abidjan","width":512,"height":512,"steps":4}' \\
-  --output generated.png
-```
+## Optional ComfyUI
 
-## Optional ComfyUI provider
-
-If you have a separate server running ComfyUI, set `IMAGE_PROVIDER=comfyui`, configure `COMFYUI_URL`, and supply a ComfyUI API-format workflow at `COMFYUI_WORKFLOW_PATH`. The included `workflow.json.example` is only a template: replace the placeholder checkpoint with a model installed on that server. Do not expose ComfyUI port 8188 publicly without appropriate network controls.
+If you operate a separate machine/server running ComfyUI, set `IMAGE_PROVIDER=comfyui`, configure `COMFYUI_URL`, and provide a compatible workflow at `COMFYUI_WORKFLOW_PATH`. The example workflow is only a template and requires a model installed on that server. Do not expose ComfyUI port 8188 publicly without network controls.
 
 ## Connecting to SethIA
 
-SethIA's backend must call this API using `Authorization: Bearer YOUR_ENGINE_API_TOKEN` and handle the response as PNG bytes. Keep both Cloudflare credentials and `ENGINE_API_TOKEN` on the server, never in browser JavaScript. Add per-user rate limits, output-size limits, and abuse monitoring before public launch. This repository is not automatically integrated into the SethIA website just by deploying it.
+SethIA's backend must call this service using `Authorization: Bearer YOUR_ENGINE_API_TOKEN` and handle the response as image bytes. Keep the token on the server, never in browser JavaScript. Add per-user rate limits and abuse monitoring before making image generation public.
+
+**Deploying this repository does not automatically connect it to the separate SethIA website.** The SethIA backend still needs to be configured to call this service.
 
 ## License
 
-The service code is MIT-licensed. AI model use remains subject to the provider's model license and terms.
+The service code is MIT-licensed. The hosted image provider's model usage remains subject to its own terms.
