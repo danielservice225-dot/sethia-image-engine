@@ -5,9 +5,12 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
+
+load_dotenv()
 
 app = FastAPI(title="SethIA Image Engine", version="0.1.0")
 
