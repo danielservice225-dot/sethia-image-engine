@@ -10,6 +10,7 @@ import httpx
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import Response
+from pydantic import BaseModel, Field
 
 load_dotenv()
 
